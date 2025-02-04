@@ -32,6 +32,10 @@ A self-managed cloud native solution with an easy to use UI and API to get start
     - [Quickstart](#local-deployment-quickstart)
     - [Requirements](#local-deployment-requirements)
     - [Deployment](#local-deployment)
+  - [Local K8s with Trident](#local-k8s-with-trident)
+    - [Requirements](#local-deployment-with-trident-requirements)
+    - [Deployment](#local-deployment-with-trident)
+  - [OpenShift Compatible Mode](#openshift-compatible-mode)
   - [Extra deployment info](#extra)
     - [Helm Parameters](#helm-parameters)
     - [Required Parameters](#required-parameters)
@@ -179,14 +183,43 @@ Replace `localVolumePaths` is a list of absolute paths to your datasets on your 
 
 After the toolkit starts up use `localhost` to access the UI in your preferred browser or to make direct API calls.
 
+### Local K8s with Trident
+#### Local Deployment with Trident Requirements
+- You have deployed Trident in your cluster
+- You have created storageclasses setting Trident as a provisioner
+- You have set a default storageclass (or you can specify it manually when you deploy the Helm chart)
+- You have created PVCs in your namespace for your dataset volumes
+   - The PVCs must be ROX or RWX
+
+#### Local Deployment with Trident
+Once your local Kubernetes cluster is set up, deploy the toolkit using:
+
+```sh
+helm install genai-toolkit genai-toolkit-helmcharts --set cloudProvider="local_trident",trident.existingDatasetPvcNames="basic",openshiftCompatibleMode=true
+```
+
+Replace `existingDatasetPvcNames` is a list of PVC names to your datasets in your namespace. This will mount Persistent Volums into the container as "ONTAP" volumes.
+
+### OpenShift Compatible Mode
+Since OpenShift has default SCC, some pods which requires specific privileges such as running as root would fail. You can use "OpenShift Compatible Mode" to allow your applications such privileges.
+
+```sh
+helm install genai-toolkit genai-toolkit-helmcharts --set cloudProvider="local",localVolumePaths="/path/to/your/dataset/directory;/path/to/your/second/dataset/directory",openshiftCompatibleMode=true
+```
+
+Note that if you enable "OpenShift Compatible Mode", some pods run as root.  
+
 ### Helm Chart Parameters
 
-| Parameter             | Description                                      | Default Value                   | Available values          |
-|-----------------------|--------------------------------------------------|---------------------------------|---------------------------|
-| `nfs.volumes`         | A list of NFS connection strings                 | None                            |                           |
-| `cloudProvider`       | The cloud provider to use.                       | `anf`                           | `anf` / `gcnv` / `local`  |
-| `db.connectionString` | The database connection string                   | To K8s DB                       |                           |
-| `localVolumePaths`    | The local directory to use as a dataset "volume" | None                            |                           |                  
+| Parameter                    | Description                                      | Default Value                   | Available values                           |
+|------------------------------|--------------------------------------------------|---------------------------------|--------------------------------------------|
+| `nfs.volumes`                | A list of NFS connection strings                 | None                            |                                            |
+| `cloudProvider`              | The cloud provider to use.                       | `anf`                           | `anf` / `gcnv` / `local` / `local_trident` |
+| `db.connectionString`        | The database connection string                   | To K8s DB                       |                                            |
+| `localVolumePaths`           | The local directory to use as a dataset "volume" | None                            |                                            |                  
+| `trident.existingDatasetPvcNames`| The existing PVC to use as a dataset "volume"    | None                            |                                            |                  
+| `trident.storageClassName`   | The storageclass to be used when creating a volume for the database  | None                            |                                            |                  
+| `openshiftCompatibleMode`    | Enable this when you deploy apps on OpenShift    | false                           | `true` / `false`                           | 
 
 Note: By not setting the `db.connectionString` the toolkit will default to use an in cluster database. This is not recommended for production use cases. For testing, it is fine.
 

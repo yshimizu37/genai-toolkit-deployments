@@ -1,4 +1,5 @@
 {{- if (and (eq .Values.db.connectionString "") (not .Values.localTesting)) }}
+  {{- if ne .Values.cloudProvider "local_trident"}}
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -11,6 +12,7 @@ spec:
   hostPath:
     path: /mnt/data
 ---
+  {{- end }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -21,4 +23,7 @@ spec:
   resources:
     requests:
       storage: 10Gi
+  {{- if and (ne .Values.cloudProvider "local_trident") (ne .Values.trident.storageClassName "")}}
+  storageClassName: {{ .Values.trident.storageClassName }}
+  {{- end }}
 {{- end }}

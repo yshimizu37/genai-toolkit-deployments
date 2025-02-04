@@ -1,4 +1,4 @@
-{{- if ne .Values.cloudProvider "local" }}
+{{- if and (ne .Values.cloudProvider "local") (ne .Values.cloudProvider "local_trident")}}
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:

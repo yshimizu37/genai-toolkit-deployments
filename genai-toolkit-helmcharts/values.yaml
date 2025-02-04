@@ -6,6 +6,12 @@ nfs:
 
 cloudProvider: "anf"
 
+openshiftCompatibleMode: false
+
+trident:
+  storageClassName: ""
+  existingDatasetPvcNames: ""
+
 #Do not change unless you know what you are doing
 volumesMountPoint: "/root_dir"
 dockerRegistry: "us-docker.pkg.dev/gcnv-ai-dev/genai-toolkit/"

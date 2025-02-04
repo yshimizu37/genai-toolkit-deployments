@@ -14,6 +14,11 @@ spec:
       labels:
         app: genai-toolkit-api
     spec:
+{{- if eq .Values.openshiftCompatibleMode true}}
+      serviceAccountName: genai-manager
+      securityContext:
+        runAsUser: 0      
+{{- end }}
       initContainers:
         - name: wait-for-auth
           image: busybox
@@ -54,18 +59,24 @@ spec:
           volumeMounts:
             - name: rsa-keys-volume
               mountPath: /keys/public
-            {{- if ne .Values.cloudProvider "local" }}
+            {{- if and (ne .Values.cloudProvider "local") (ne .Values.cloudProvider "local_trident")}}
               {{- range $index, $nfs_volumes := (splitList ";" .Values.nfs.volumes) }}
                 {{- $nfs_volume_parts := splitList ":" $nfs_volumes }}
                 {{- $concatString :=  printf "%s/%s%s" $.Values.volumesMountPoint $.Values.cloudProvider (index $nfs_volume_parts 1)}}
             - name: nfs-volume-{{ $index }}
               mountPath: {{ $concatString }}
               {{- end }}
-            {{- else }}
+            {{- else if eq .Values.cloudProvider "local"}}
               {{- range $index, $local_dirs := (splitList ";" .Values.localVolumePaths) }}
             - name: nfs-volume-{{ $index }}
               mountPath: {{ $.Values.volumesMountPoint }}/ontap/{{ (splitList "/" $local_dirs | last) }}
               {{- end }}
+            {{- else if eq .Values.cloudProvider "local_trident"}}
+              {{- range $index, $trident_pvcs := (splitList ";" .Values.trident.existingDatasetPvcNames) }}
+            - name: nfs-volume-{{ $index }}
+              mountPath: {{ $.Values.volumesMountPoint }}/ontap/{{ $trident_pvcs }}
+              {{- end }}
+            {{- else }}
             {{- end }}
       volumes:
         - name: rsa-keys-volume
@@ -74,19 +85,26 @@ spec:
             items:
               - key: public_key.rsa
                 path: public_key.rsa
-        {{- if ne .Values.cloudProvider "local" }}
+        {{- if and (ne .Values.cloudProvider "local") (ne .Values.cloudProvider "local_trident")}}
           {{- range $index, $nfs_volumes := (splitList ";" .Values.nfs.volumes) }}
             {{- $nfs_volume_parts := splitList ":" $nfs_volumes }}
         - name: nfs-volume-{{ $index }}
           persistentVolumeClaim:
             claimName: netapp-nfs-pvc-{{ $index }}
           {{- end }}
-        {{- else }}
+        {{- else if eq .Values.cloudProvider "local"}}
           {{- range $index, $local_dirs := (splitList ";" .Values.localVolumePaths) }}
         - name: nfs-volume-{{ $index }}
           hostPath:
             path: {{ $local_dirs }}
           {{- end }}
+        {{- else if eq .Values.cloudProvider "local_trident"}}
+          {{- range $index, $trident_pvcs := (splitList ";" .Values.trident.existingDatasetPvcNames) }}
+        - name: nfs-volume-{{ $index }}
+          persistentVolumeClaim:
+            claimName: {{ $trident_pvcs }}
+          {{- end }}
+        {{- else }}
         {{- end }}
 ---
 apiVersion: v1

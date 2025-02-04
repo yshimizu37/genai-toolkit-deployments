@@ -14,6 +14,11 @@ spec:
       labels:
         app: genai-toolkit-nginx
     spec:
+{{- if eq .Values.openshiftCompatibleMode true}}
+      serviceAccountName: genai-manager
+      securityContext:
+        runAsUser: 0      
+{{- end }}
       initContainers:
         - name: wait-for-auth
           image: busybox
